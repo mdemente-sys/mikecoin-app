@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MikeCoin Gestor</title>
+    
+    <!-- Iconos y Metadatos para "Añadir a pantalla de inicio" -->
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='12' fill='%23F97316'/%3E%3Cpath d='M7 17V7H9.5L12 10.5L14.5 7H17V17H15V10L13 13H11L9 10V17H7Z' fill='white'/%3E%3Crect x='8' y='10' width='8' height='1.5' fill='%23F97316' /%3E%3Crect x='8' y='12.5' width='8' height='1.5' fill='%23F97316' /%3E%3C/svg%3E">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='12' fill='%23F97316'/%3E%3Cpath d='M7 17V7H9.5L12 10.5L14.5 7H17V17H15V10L13 13H11L9 10V17H7Z' fill='white'/%3E%3Crect x='8' y='10' width='8' height='1.5' fill='%23F97316' /%3E%3Crect x='8' y='12.5' width='8' height='1.5' fill='%23F97316' /%3E%3C/svg%3E">
+    <meta name="theme-color" content="#f97316">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        #loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #fb923c 0%, #f97316 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 0.5s ease;
+        }
+        #loading-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .tab-btn.active {
+            border-bottom-color: #f97316;
+            color: #f97316;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+    <div id="loading-overlay">
+        <div class="text-white text-center">
+            <svg class="animate-spin h-10 w-10 text-white mx-auto mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <h1 class="text-2xl font-bold">Cargando MikeCoin</h1>
+            <p class="text-lg">Conectando con Google...</p>
+        </div>
+    </div>
+
+    <div id="app-container" class="max-w-7xl mx-auto p-4 md:p-8 hidden">
+        
+        <header class="flex justify-between items-center mb-8">
+             <div class="flex items-center gap-4">
+                <svg class="h-10 w-10" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="12" cy="12" r="12" fill="#F97316"/>
+                    <path d="M7 17V7H9.5L12 10.5L14.5 7H17V17H15V10L13 13H11L9 10V17H7Z" fill="white"/>
+                    <rect x="8" y="10" width="8" height="1.5" fill="#F97316" />
+                    <rect x="8" y="12.5" width="8" height="1.5" fill="#F97316" />
+                </svg>
+                <h1 class="text-3xl font-bold text-gray-900">MikeCoin</h1>
+            </div>
+            <div>
+                <button id="authorize_button" class="bg-orange-500 text-white font-semibold px-4 py-2 rounded-lg shadow-md hover:bg-orange-600 transition hidden">
+                    Iniciar Sesión con Google
+                </button>
+            </div>
+        </header>
+
+        <main id="main-content" class="hidden">
+            <div class="border-b border-gray-200 mb-6">
+                <nav class="-mb-px flex space-x-6" aria-label="Tabs">
+                    <button onclick="changeTab('gastos')" class="tab-btn active whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">Gastos</button>
+                    <button onclick="changeTab('cuentas')" class="tab-btn whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">Cuentas</button>
+                    <button onclick="changeTab('inversiones')" class="tab-btn whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">Inversiones</button>
+                </nav>
+            </div>
+
+            <!-- Contenido Pestaña Gastos -->
+            <div id="gastos-tab" class="tab-content active space-y-8">
+                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- Formulario para añadir gastos -->
+                    <div class="md:col-span-1 bg-white p-6 rounded-xl shadow-lg">
+                        <h2 class="text-xl font-semibold mb-4">Añadir Nuevo Gasto</h2>
+                        <form id="add-expense-form" class="space-y-4">
+                            <div>
+                                <label for="expense-amount" class="block text-sm font-medium text-gray-700">Cantidad (€)</label>
+                                <input type="number" id="expense-amount" step="0.01" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500">
+                            </div>
+                            <div>
+                                <label for="expense-category" class="block text-sm font-medium text-gray-700">Categoría</label>
+                                <select id="expense-category" required class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-orange-500 focus:border-orange-500 sm:text-sm rounded-md"></select>
+                            </div>
+                            <div>
+                                <label for="expense-date" class="block text-sm font-medium text-gray-700">Fecha</label>
+                                <input type="date" id="expense-date" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500">
+                            </div>
+                            <div>
+                                <label for="expense-description" class="block text-sm font-medium text-gray-700">Descripción (Opcional)</label>
+                                <input type="text" id="expense-description" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500">
+                            </div>
+                            <button type="submit" class="w-full bg-orange-500 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-orange-600 transition">Añadir Gasto</button>
+                        </form>
+                    </div>
+
+                    <!-- Resúmenes -->
+                    <div class="md:col-span-2 bg-white p-6 rounded-xl shadow-lg">
+                        <h2 class="text-xl font-semibold mb-4">Resúmenes de Gastos</h2>
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 id="summary-title" class="text-lg font-medium text-gray-900">Este Mes</h3>
+                             <div class="flex space-x-2">
+                                <button id="prev-summary" class="text-orange-600 hover:text-orange-700">&lt; Anterior</button>
+                                <button id="next-summary" class="text-orange-600 hover:text-orange-700">Siguiente &gt;</button>
+                            </div>
+                        </div>
+                        <div id="summary-content" class="text-center p-4">
+                            <p class="text-4xl font-bold text-orange-600" id="summary-total">0.00€</p>
+                            <div id="summary-by-category" class="mt-4"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Últimos gastos -->
+                <div class="bg-white p-6 rounded-xl shadow-lg mt-6">
+                    <h2 class="text-xl font-semibold mb-4">Últimos Gastos Registrados</h2>
+                    <div id="recent-expenses-list" class="space-y-4"></div>
+                </div>
+
+                <!-- Nueva sección para buscar gastos -->
+                <div class="bg-white p-6 rounded-xl shadow-lg mt-6">
+                    <h2 class="text-xl font-semibold mb-4">Buscar y Gestionar Gastos</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                        <div>
+                            <label for="search-category" class="block text-sm font-medium text-gray-700">Categoría</label>
+                            <select id="search-category" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-orange-500 focus:border-orange-500 sm:text-sm rounded-md">
+                                <option value="">Todas</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="search-start-date" class="block text-sm font-medium text-gray-700">Desde</label>
+                            <input type="date" id="search-start-date" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm">
+                        </div>
+                        <div>
+                            <label for="search-end-date" class="block text-sm font-medium text-gray-700">Hasta</label>
+                            <input type="date" id="search-end-date" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm">
+                        </div>
+                        <div class="flex space-x-2">
+                            <button id="search-button" class="w-full bg-orange-500 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-orange-600 transition">Buscar</button>
+                            <button id="clear-search-button" class="w-full bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-lg shadow-sm hover:bg-gray-300 transition">Limpiar</button>
+                        </div>
+                    </div>
+                    <div id="search-results-container" class="mt-6">
+                        <div id="search-results-list" class="space-y-4"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contenido Pestaña Cuentas -->
+            <div id="cuentas-tab" class="tab-content space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="md:col-span-1 bg-white p-6 rounded-xl shadow-lg">
+                        <h2 class="text-xl font-semibold mb-4">Añadir/Actualizar Cuenta</h2>
+                        <form id="add-account-form" class="space-y-4">
+                            <div>
+                                <label for="account-name" class="block text-sm font-medium text-gray-700">Nombre de la Cuenta</label>
+                                <input type="text" id="account-name" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500">
+                            </div>
+                            <div>
+                                <label for="account-balance" class="block text-sm font-medium text-gray-700">Saldo Actual (€)</label>
+                                <input type="number" id="account-balance" step="0.01" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500">
+                            </div>
+                            <button type="submit" class="w-full bg-orange-500 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-orange-600 transition">Guardar Saldo</button>
+                        </form>
+                    </div>
+                    <div class="md:col-span-2 bg-white p-6 rounded-xl shadow-lg">
+                        <h2 class="text-xl font-semibold mb-4">Mis Cuentas</h2>
+                        <p class="text-sm text-gray-500 mb-4">Se mostrará el último saldo registrado para cada cuenta.</p>
+                        <div id="accounts-list" class="space-y-3"></div>
+                        <hr class="my-4">
+                        <div class="flex justify-between items-center font-bold text-lg">
+                            <span>Saldo Total:</span>
+                            <span id="total-accounts-balance">0,00€</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contenido Pestaña Inversiones -->
+            <div id="inversiones-tab" class="tab-content space-y-6">
+                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="md:col-span-1 bg-white p-6 rounded-xl shadow-lg">
+                        <h2 class="text-xl font-semibold mb-4">Añadir/Actualizar Cartera</h2>
+                        <form id="add-investment-form" class="space-y-4">
+                            <div>
+                                <label for="investment-portfolio" class="block text-sm font-medium text-gray-700">Nombre de la Cartera</label>
+                                <input type="text" id="investment-portfolio" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm">
+                            </div>
+                            <div>
+                                <label for="investment-value" class="block text-sm font-medium text-gray-700">Valor Actual (€)</label>
+                                <input type="number" id="investment-value" step="0.01" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm">
+                            </div>
+                             <div>
+                                <label for="investment-monthly" class="block text-sm font-medium text-gray-700">Inversión este Mes (€)</label>
+                                <input type="number" id="investment-monthly" step="0.01" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm">
+                            </div>
+                            <button type="submit" class="w-full bg-orange-500 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-orange-600 transition">Guardar Valor</button>
+                        </form>
+                    </div>
+                    <div class="md:col-span-2 bg-white p-6 rounded-xl shadow-lg">
+                        <h2 class="text-xl font-semibold mb-4">Mis Inversiones</h2>
+                        <p class="text-sm text-gray-500 mb-4">Se mostrará el último valor registrado para cada cartera.</p>
+                        <div id="investments-list" class="space-y-3"></div>
+                        <hr class="my-4">
+                        <div class="flex justify-between items-center font-bold text-lg">
+                            <span>Valor Total Invertido:</span>
+                            <span id="total-investments-value">0,00€</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+        
+        <footer id="footer-content" class="text-center py-4 hidden">
+            <button id="signout_button" class="bg-gray-200 text-gray-700 font-semibold px-4 py-2 rounded-lg shadow-sm hover:bg-gray-300 transition">
+                Cerrar Sesión
+            </button>
+        </footer>
+
+    </div>
+
+    <!-- Modal para Editar Gasto -->
+    <div id="edit-expense-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+        <div class="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-xl bg-white">
+            <div class="mt-3 text-center">
+                <h3 class="text-lg leading-6 font-medium text-gray-900">Editar Gasto</h3>
+                <div class="mt-2 px-7 py-3">
+                    <form id="edit-expense-form" class="space-y-4 text-left">
+                        <input type="hidden" id="edit-expense-row-index">
+                        <div>
+                            <label for="edit-expense-amount" class="block text-sm font-medium text-gray-700">Cantidad (€)</label>
+                            <input type="number" id="edit-expense-amount" step="0.01" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500">
+                        </div>
+                        <div>
+                            <label for="edit-expense-category" class="block text-sm font-medium text-gray-700">Categoría</label>
+                            <select id="edit-expense-category" required class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-orange-500 focus:border-orange-500 sm:text-sm rounded-md"></select>
+                        </div>
+                        <div>
+                            <label for="edit-expense-date" class="block text-sm font-medium text-gray-700">Fecha</label>
+                            <input type="date" id="edit-expense-date" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500">
+                        </div>
+                        <div>
+                            <label for="edit-expense-description" class="block text-sm font-medium text-gray-700">Descripción (Opcional)</label>
+                            <input type="text" id="edit-expense-description" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500">
+                        </div>
+                    </form>
+                </div>
+                <div class="items-center px-4 py-3">
+                    <button id="save-expense-button" class="px-4 py-2 bg-orange-500 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-500">
+                        Guardar Cambios
+                    </button>
+                    <button id="close-modal-button" class="mt-2 px-4 py-2 bg-gray-200 text-gray-800 text-base font-medium rounded-md w-full shadow-sm hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-300">
+                        Cancelar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Confirmar Borrado -->
+    <div id="delete-confirm-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+        <div class="relative top-20 mx-auto p-5 border w-full max-w-sm shadow-lg rounded-xl bg-white">
+            <div class="mt-3 text-center">
+                <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
+                    <svg class="h-6 w-6 text-red-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                </div>
+                <h3 class="text-lg leading-6 font-medium text-gray-900 mt-2">Eliminar Gasto</h3>
+                <div class="mt-2 px-7 py-3">
+                    <p class="text-sm text-gray-500">¿Estás seguro? Esta acción no se puede deshacer.</p>
+                </div>
+                <div class="items-center px-4 py-3 flex gap-2">
+                    <button id="confirm-delete-button" class="px-4 py-2 bg-red-500 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-red-600 focus:outline-none">
+                        Eliminar
+                    </button>
+                    <button id="cancel-delete-button" class="px-4 py-2 bg-gray-200 text-gray-800 text-base font-medium rounded-md w-full shadow-sm hover:bg-gray-300 focus:outline-none">
+                        Cancelar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <script type="text/javascript">
+        // =========================================================================
+        // CONFIGURACIÓN
+        // =========================================================================
+        const CLIENT_ID = '200274914326-77i0n1i7i4pcv3o8qanvkh99g3hhb4f1.apps.googleusercontent.com';
+        const SPREADSHEET_ID = '1rlcpJvbMgoBvrnW9lCsppWIFrLAnaJs5l5Xx-7YZOBw';
+        let sheetId = 0; // Se asumirá 0, la primera hoja. Se podría obtener dinámicamente.
+        
+        // =========================================================================
+        // CÓDIGO DE LA APLICACIÓN (No modificar)
+        // =========================================================================
+        const DISCOVERY_DOC = 'https://sheets.googleapis.com/$discovery/rest?version=v4';
+        const SCOPES = 'https://www.googleapis.com/auth/spreadsheets';
+        let tokenClient;
+        let gapiInited = false;
+        let gisInited = false;
+
+        const authorizeButton = document.getElementById('authorize_button');
+        const signoutButton = document.getElementById('signout_button');
+        const mainContent = document.getElementById('main-content');
+        const footerContent = document.getElementById('footer-content');
+        const loadingOverlay = document.getElementById('loading-overlay');
+        
+        let allExpenses = [], allAccounts = [], allInvestments = [];
+        let summaryDate = new Date();
+        let summaryMode = 'month';
+
+        function gapiLoaded() { gapi.load('client', initializeGapiClient); }
+        async function initializeGapiClient() {
+            await gapi.client.init({ discoveryDocs: [DISCOVERY_DOC] });
+            gapiInited = true;
+            maybeEnableButtons();
+        }
+        function gisLoaded() {
+            tokenClient = google.accounts.oauth2.initTokenClient({
+                client_id: CLIENT_ID,
+                scope: SCOPES,
+                callback: '',
+            });
+            gisInited = true;
+            maybeEnableButtons();
+        }
+        function maybeEnableButtons() {
+            if (gapiInited && gisInited) {
+                loadingOverlay.classList.add('hidden');
+                document.getElementById('app-container').classList.remove('hidden');
+                
+                if (localStorage.getItem('userWasLoggedIn') === 'true') {
+                    handleAuthClick();
+                } else {
+                    authorizeButton.classList.remove('hidden');
+                }
+            }
+        }
+        
+        authorizeButton.onclick = handleAuthClick;
+        signoutButton.onclick = handleSignoutClick;
+
+        function handleAuthClick() {
+            tokenClient.callback = async (resp) => {
+                if (resp.error) {
+                    console.error("Error de autenticación:", resp);
+                    localStorage.removeItem('userWasLoggedIn');
+                    updateUiOnLogout();
+                    return;
+                }
+                localStorage.setItem('userWasLoggedIn', 'true');
+                updateUiOnLogin();
+                await loadAppData();
+            };
+            
+            if (gapi.client.getToken() === null) {
+                if (localStorage.getItem('userWasLoggedIn') === 'true'){
+                    tokenClient.requestAccessToken({prompt: ''});
+                } else {
+                    tokenClient.requestAccessToken({prompt: 'consent'});
+                }
+            } else {
+                tokenClient.requestAccessToken({prompt: ''});
+            }
+        }
+        function handleSignoutClick() {
+            const token = gapi.client.getToken();
+            if (token) {
+                google.accounts.oauth2.revoke(token.access_token);
+                gapi.client.setToken('');
+                localStorage.removeItem('userWasLoggedIn');
+                updateUiOnLogout();
+            }
+        }
+        function updateUiOnLogin() {
+            authorizeButton.classList.add('hidden');
+            mainContent.classList.remove('hidden');
+            footerContent.classList.remove('hidden');
+        }
+        function updateUiOnLogout() {
+            authorizeButton.classList.remove('hidden');
+            mainContent.classList.add('hidden');
+            footerContent.classList.add('hidden');
+        }
+        
+        async function loadAppData() {
+            try {
+                // Obtenemos el ID de la hoja 'Gastos' para usarlo al borrar filas.
+                const sheetMeta = await gapi.client.sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
+                const gastosSheet = sheetMeta.result.sheets.find(s => s.properties.title === 'Gastos');
+                if (gastosSheet) {
+                    sheetId = gastosSheet.properties.sheetId;
+                }
+
+                await Promise.all([
+                    loadCategories(),
+                    loadExpenses(),
+                    loadAccounts(),
+                    loadInvestments()
+                ]);
+                document.getElementById('expense-date').valueAsDate = new Date();
+                renderSummary();
+                renderAccounts();
+                renderInvestments();
+                renderRecentExpenses();
+            } catch (error) {
+                console.error("Error al cargar los datos de la aplicación:", error);
+            }
+        }
+        
+        // --- SECCIÓN GASTOS ---
+        async function loadCategories() {
+            try {
+                const response = await gapi.client.sheets.spreadsheets.values.get({
+                    spreadsheetId: SPREADSHEET_ID,
+                    range: 'Categorias!A2:A',
+                });
+                const categories = response.result.values ? response.result.values.flat() : [];
+                const categorySelect = document.getElementById('expense-category');
+                const searchCategorySelect = document.getElementById('search-category');
+                
+                categorySelect.innerHTML = '<option value="" disabled selected>Selecciona una categoría</option>';
+                searchCategorySelect.innerHTML = '<option value="">Todas</option>';
+                
+                categories.forEach(cat => {
+                    if (cat) {
+                        categorySelect.innerHTML += `<option value="${cat}">${cat}</option>`;
+                        searchCategorySelect.innerHTML += `<option value="${cat}">${cat}</option>`;
+                    }
+                });
+            } catch (err) { console.error('Error al cargar categorías', err); }
+        }
+        async function loadExpenses() {
+            try {
+                const response = await gapi.client.sheets.spreadsheets.values.get({
+                    spreadsheetId: SPREADSHEET_ID,
+                    range: 'Gastos!A2:D',
+                });
+                allExpenses = (response.result.values || [])
+                    .map((row, index) => ({
+                        date: row[0],
+                        amount: parseFloat(String(row[1]).replace(',','.')) || 0,
+                        category: row[2],
+                        description: row[3] || '',
+                        rowIndex: index + 2
+                    }))
+                    .filter(exp => exp.date);
+            } catch (err) { console.error('Error al cargar gastos', err); }
+        }
+        document.getElementById('add-expense-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const amount = document.getElementById('expense-amount').value;
+            const category = document.getElementById('expense-category').value;
+            const date = document.getElementById('expense-date').value;
+            const description = document.getElementById('expense-description').value;
+            const [year, month, day] = date.split('-');
+            const formattedDate = `${day}/${month}/${year}`;
+            const newExpense = [ formattedDate, amount.replace(',', '.'), category, description ];
+            
+            try {
+                await gapi.client.sheets.spreadsheets.values.append({
+                    spreadsheetId: SPREADSHEET_ID,
+                    range: 'Gastos!A:D', valueInputOption: 'USER_ENTERED',
+                    resource: { values: [newExpense] }
+                });
+                
+                await loadExpenses();
+                renderSummary();
+                renderRecentExpenses();
+                e.target.reset();
+                document.getElementById('expense-date').valueAsDate = new Date();
+            } catch (err) { console.error('Error al añadir gasto', err); }
+        });
+        
+        function renderSummary() {
+            const titleEl = document.getElementById('summary-title');
+            const totalEl = document.getElementById('summary-total');
+            const byCategoryEl = document.getElementById('summary-by-category');
+
+            const now = summaryDate;
+            let filteredExpenses = [];
+
+            if (summaryMode === 'month') {
+                const month = now.toLocaleString('es-ES', { month: 'long' });
+                const year = now.getFullYear();
+                titleEl.textContent = `${month.charAt(0).toUpperCase() + month.slice(1)} ${year}`;
+                filteredExpenses = allExpenses.filter(exp => {
+                    if (!exp.date || typeof exp.date !== 'string') return false;
+                    const parts = exp.date.split('/');
+                    if (parts.length !== 3) return false;
+                    const [day, month, year] = parts.map(Number);
+                    if (isNaN(day) || isNaN(month) || isNaN(year)) return false;
+                    const expDate = new Date(year, month - 1, day);
+                    return expDate.getMonth() === now.getMonth() && expDate.getFullYear() === now.getFullYear();
+                });
+            }
+            
+            const total = filteredExpenses.reduce((sum, exp) => sum + exp.amount, 0);
+            totalEl.textContent = `${total.toFixed(2).replace('.', ',')}€`;
+            
+            const byCategory = filteredExpenses.reduce((acc, exp) => {
+                if(exp.category) acc[exp.category] = (acc[exp.category] || 0) + exp.amount;
+                return acc;
+            }, {});
+            
+            byCategoryEl.innerHTML = '';
+            if (Object.keys(byCategory).length > 0) {
+                 Object.entries(byCategory).sort(([,a],[,b]) => b-a).forEach(([category, amount]) => {
+                    const percentage = total > 0 ? (amount / total * 100).toFixed(1) : 0;
+                    byCategoryEl.innerHTML += `
+                        <div class="flex justify-between items-center text-sm mt-2">
+                            <div class="flex-1 text-left">
+                                <p class="text-gray-600">${category}</p>
+                                <div class="w-full bg-gray-200 rounded-full h-2.5 mt-1">
+                                    <div class="bg-orange-500 h-2.5 rounded-full" style="width: ${percentage}%"></div>
+                                </div>
+                            </div>
+                            <p class="font-semibold w-24 text-right">${amount.toFixed(2).replace('.', ',')}€</p>
+                        </div>`;
+                });
+            } else { byCategoryEl.innerHTML = '<p class="text-gray-500 mt-4">No hay gastos en este período.</p>'; }
+        }
+
+        document.getElementById('prev-summary').addEventListener('click', () => {
+            if (summaryMode === 'month') summaryDate.setMonth(summaryDate.getMonth() - 1);
+            renderSummary();
+        });
+        document.getElementById('next-summary').addEventListener('click', () => {
+            if (summaryMode === 'month') summaryDate.setMonth(summaryDate.getMonth() + 1);
+            renderSummary();
+        });
+
+        function renderRecentExpenses() {
+            const listEl = document.getElementById('recent-expenses-list');
+            listEl.innerHTML = '';
+            if (allExpenses.length === 0) {
+                listEl.innerHTML = '<p class="text-gray-500">No hay gastos registrados.</p>';
+                return;
+            }
+            const sortedExpenses = [...allExpenses].sort((a, b) => {
+                const dateA = a.date.split('/').reverse().join('-');
+                const dateB = b.date.split('/').reverse().join('-');
+                return new Date(dateB) - new Date(dateA);
+            });
+            const recentExpenses = sortedExpenses.slice(0, 10);
+            recentExpenses.forEach(exp => listEl.innerHTML += createExpenseRowHTML(exp));
+        }
+
+        // --- Lógica de Búsqueda y Gestión ---
+        document.getElementById('search-button').addEventListener('click', handleSearch);
+        document.getElementById('clear-search-button').addEventListener('click', clearSearch);
+        
+        function handleSearch() {
+            const category = document.getElementById('search-category').value;
+            const startDate = document.getElementById('search-start-date').value;
+            const endDate = document.getElementById('search-end-date').value;
+
+            let filteredExpenses = allExpenses;
+
+            if (category) {
+                filteredExpenses = filteredExpenses.filter(exp => exp.category === category);
+            }
+            if (startDate) {
+                const start = new Date(startDate);
+                start.setHours(0,0,0,0);
+                filteredExpenses = filteredExpenses.filter(exp => {
+                    const [day, month, year] = exp.date.split('/');
+                    return new Date(`${year}-${month}-${day}`) >= start;
+                });
+            }
+            if (endDate) {
+                const end = new Date(endDate);
+                end.setHours(23,59,59,999);
+                filteredExpenses = filteredExpenses.filter(exp => {
+                    const [day, month, year] = exp.date.split('/');
+                    return new Date(`${year}-${month}-${day}`) <= end;
+                });
+            }
+            renderSearchResults(filteredExpenses);
+        }
+
+        function clearSearch() {
+            document.getElementById('search-category').value = '';
+            document.getElementById('search-start-date').value = '';
+            document.getElementById('search-end-date').value = '';
+            document.getElementById('search-results-list').innerHTML = '';
+        }
+
+        function renderSearchResults(expenses) {
+            const listEl = document.getElementById('search-results-list');
+            listEl.innerHTML = '';
+            if (expenses.length === 0) {
+                listEl.innerHTML = '<p class="text-gray-500 text-center py-4">No se encontraron gastos con esos criterios.</p>';
+                return;
+            }
+            expenses.forEach(exp => listEl.innerHTML += createExpenseRowHTML(exp, true));
+        }
+        
+        // --- Modales (Editar y Borrar) ---
+        const editModal = document.getElementById('edit-expense-modal');
+        const deleteModal = document.getElementById('delete-confirm-modal');
+        
+        function openEditModal(rowIndex) {
+            const expense = allExpenses.find(exp => exp.rowIndex === rowIndex);
+            if (!expense) return;
+            const editCategorySelect = document.getElementById('edit-expense-category');
+            const mainCategorySelect = document.getElementById('expense-category');
+            editCategorySelect.innerHTML = mainCategorySelect.innerHTML;
+            document.getElementById('edit-expense-row-index').value = rowIndex;
+            document.getElementById('edit-expense-amount').value = expense.amount;
+            document.getElementById('edit-expense-category').value = expense.category;
+            document.getElementById('edit-expense-description').value = expense.description;
+            const [day, month, year] = expense.date.split('/');
+            document.getElementById('edit-expense-date').value = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+            editModal.classList.remove('hidden');
+        }
+
+        function closeEditModal() { editModal.classList.add('hidden'); }
+
+        async function handleUpdateExpense() {
+            const rowIndex = document.getElementById('edit-expense-row-index').value;
+            const amount = document.getElementById('edit-expense-amount').value;
+            const category = document.getElementById('edit-expense-category').value;
+            const date = document.getElementById('edit-expense-date').value;
+            const description = document.getElementById('edit-expense-description').value;
+
+            const [year, month, day] = date.split('-');
+            const formattedDate = `${day}/${month}/${year}`;
+            const updatedExpense = [ formattedDate, amount.replace(',', '.'), category, description ];
+
+            try {
+                await gapi.client.sheets.spreadsheets.values.update({
+                    spreadsheetId: SPREADSHEET_ID,
+                    range: `Gastos!A${rowIndex}:D${rowIndex}`,
+                    valueInputOption: 'USER_ENTERED',
+                    resource: { values: [updatedExpense] }
+                });
+                const expenseIndex = allExpenses.findIndex(exp => exp.rowIndex == rowIndex);
+                if (expenseIndex > -1) {
+                    allExpenses[expenseIndex] = {
+                        date: formattedDate,
+                        amount: parseFloat(amount.replace(',', '.')),
+                        category, description,
+                        rowIndex: parseInt(rowIndex)
+                    };
+                }
+                renderSummary();
+                renderRecentExpenses();
+                closeEditModal();
+            } catch (err) { console.error('Error al actualizar el gasto', err); }
+        }
+
+        let rowToDelete = null;
+        function handleDeleteExpense(rowIndex) {
+            rowToDelete = rowIndex;
+            deleteModal.classList.remove('hidden');
+        }
+        async function confirmDelete() {
+            if (!rowToDelete) return;
+            try {
+                await gapi.client.sheets.spreadsheets.batchUpdate({
+                    spreadsheetId: SPREADSHEET_ID,
+                    resource: {
+                        requests: [{
+                            deleteDimension: {
+                                range: {
+                                    sheetId: sheetId,
+                                    dimension: 'ROWS',
+                                    startIndex: rowToDelete - 1,
+                                    endIndex: rowToDelete
+                                }
+                            }
+                        }]
+                    }
+                });
+                
+                // Recargar datos para mantener la consistencia
+                await loadExpenses();
+                renderSummary();
+                renderRecentExpenses();
+                handleSearch(); // Para actualizar los resultados de búsqueda si están visibles
+                
+            } catch (err) { console.error('Error al eliminar el gasto', err); }
+            finally {
+                closeDeleteModal();
+            }
+        }
+        function closeDeleteModal() {
+            rowToDelete = null;
+            deleteModal.classList.add('hidden');
+        }
+
+        document.getElementById('close-modal-button').addEventListener('click', closeEditModal);
+        document.getElementById('save-expense-button').addEventListener('click', handleUpdateExpense);
+        document.getElementById('cancel-delete-button').addEventListener('click', closeDeleteModal);
+        document.getElementById('confirm-delete-button').addEventListener('click', confirmDelete);
+
+        // --- SECCIÓN CUENTAS ---
+        async function loadAccounts() {
+            try {
+                const response = await gapi.client.sheets.spreadsheets.values.get({
+                    spreadsheetId: SPREADSHEET_ID,
+                    range: 'Cuentas!A2:C',
+                });
+                allAccounts = (response.result.values || []).map(row => ({
+                    date: row[0], name: row[1],
+                    balance: parseFloat(String(row[2]).replace(',','.')) || 0
+                }));
+            } catch (err) { console.error('Error al cargar cuentas', err); }
+        }
+        function renderAccounts() {
+            const listEl = document.getElementById('accounts-list');
+            const totalEl = document.getElementById('total-accounts-balance');
+            listEl.innerHTML = '';
+            const latestAccounts = {};
+            allAccounts.forEach(acc => { latestAccounts[acc.name] = acc; });
+            const accountsArray = Object.values(latestAccounts);
+            if (accountsArray.length === 0) {
+                listEl.innerHTML = '<p class="text-gray-500">Aún no has añadido ninguna cuenta.</p>';
+            } else {
+                 accountsArray.forEach(acc => {
+                    listEl.innerHTML += `
+                        <div class="flex justify-between items-center p-2 rounded-md hover:bg-gray-100">
+                            <span class="text-gray-800">${acc.name}</span>
+                            <span class="font-semibold">${acc.balance.toFixed(2).replace('.', ',')}€</span>
+                        </div>`;
+                });
+            }
+            const total = accountsArray.reduce((sum, acc) => sum + acc.balance, 0);
+            totalEl.textContent = `${total.toFixed(2).replace('.', ',')}€`;
+        }
+        document.getElementById('add-account-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const name = document.getElementById('account-name').value;
+            const balance = document.getElementById('account-balance').value;
+            const formattedDate = new Date().toLocaleDateString('es-ES');
+            const newAccountEntry = [formattedDate, name, balance.replace(',', '.')];
+            try {
+                await gapi.client.sheets.spreadsheets.values.append({
+                    spreadsheetId: SPREADSHEET_ID, range: 'Cuentas!A:C', valueInputOption: 'USER_ENTERED',
+                    resource: { values: [newAccountEntry] }
+                });
+                allAccounts.push({ date: formattedDate, name, balance: parseFloat(balance.replace(',','.')) });
+                renderAccounts();
+                e.target.reset();
+            } catch (err) { console.error('Error al añadir cuenta', err); }
+        });
+        
+        // --- SECCIÓN INVERSIONES ---
+        async function loadInvestments() {
+             try {
+                const response = await gapi.client.sheets.spreadsheets.values.get({
+                    spreadsheetId: SPREADSHEET_ID,
+                    range: 'Inversiones!A2:D',
+                });
+                allInvestments = (response.result.values || []).map(row => ({
+                    date: row[0], portfolio: row[1],
+                    value: parseFloat(String(row[2]).replace(',','.')) || 0,
+                    monthly: parseFloat(String(row[3]).replace(',','.')) || 0
+                }));
+            } catch (err) { console.error('Error al cargar inversiones', err); }
+        }
+        function renderInvestments() {
+            const listEl = document.getElementById('investments-list');
+            const totalEl = document.getElementById('total-investments-value');
+            listEl.innerHTML = '';
+            const latestInvestments = {};
+            allInvestments.forEach(inv => { latestInvestments[inv.portfolio] = inv; });
+            const investmentsArray = Object.values(latestInvestments);
+            if (investmentsArray.length === 0) {
+                listEl.innerHTML = '<p class="text-gray-500">Aún no has añadido ninguna cartera.</p>';
+            } else {
+                investmentsArray.forEach(inv => {
+                    listEl.innerHTML += `
+                        <div class="flex justify-between items-center p-2 rounded-md hover:bg-gray-100">
+                           <div>
+                                <p class="text-gray-800">${inv.portfolio}</p>
+                                <p class="text-xs text-green-600">+${inv.monthly.toFixed(2).replace('.', ',')}€ este mes</p>
+                           </div>
+                            <span class="font-semibold">${inv.value.toFixed(2).replace('.', ',')}€</span>
+                        </div>`;
+                });
+            }
+            const total = investmentsArray.reduce((sum, inv) => sum + inv.value, 0);
+            totalEl.textContent = `${total.toFixed(2).replace('.', ',')}€`;
+        }
+        document.getElementById('add-investment-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const portfolio = document.getElementById('investment-portfolio').value;
+            const value = document.getElementById('investment-value').value;
+            const monthly = document.getElementById('investment-monthly').value;
+            const formattedDate = new Date().toLocaleDateString('es-ES');
+            const newInvestmentEntry = [formattedDate, portfolio, value.replace(',', '.'), monthly.replace(',', '.')];
+            try {
+                await gapi.client.sheets.spreadsheets.values.append({
+                    spreadsheetId: SPREADSHEET_ID, range: 'Inversiones!A:D', valueInputOption: 'USER_ENTERED',
+                    resource: { values: [newInvestmentEntry] }
+                });
+                allInvestments.push({ date: formattedDate, portfolio, value: parseFloat(value.replace(',','.')), monthly: parseFloat(monthly.replace(',','.')) });
+                renderInvestments();
+                e.target.reset();
+            } catch (err) { console.error('Error al añadir inversión', err); }
+        });
+        
+        // --- UTILIDADES Y NAVEGACIÓN ---
+        function changeTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            
+            document.getElementById(`${tabName}-tab`).classList.add('active');
+            document.querySelector(`button[onclick="changeTab('${tabName}')"]`).classList.add('active');
+        }
+        
+        function createExpenseRowHTML(exp, showDelete = false) {
+             return `
+                <div class="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 border-b border-gray-100">
+                    <div class="flex-1">
+                        <p class="font-medium text-gray-800">${exp.category}</p>
+                        <p class="text-sm text-gray-500">${exp.description || 'Sin descripción'}</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="font-semibold text-lg text-red-500">-${exp.amount.toFixed(2).replace('.', ',')}€</p>
+                        <p class="text-xs text-gray-400">${exp.date}</p>
+                    </div>
+                    <div class="ml-4 flex gap-1">
+                        <button onclick="openEditModal(${exp.rowIndex})" class="p-2 text-gray-500 hover:text-orange-600 rounded-full hover:bg-orange-100 transition">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" /></svg>
+                        </button>
+                        ${showDelete ? `
+                        <button onclick="handleDeleteExpense(${exp.rowIndex})" class="p-2 text-gray-500 hover:text-red-600 rounded-full hover:bg-red-100 transition">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>
+                        </button>
+                        ` : ''}
+                    </div>
+                </div>`;
+        }
+    </script>
+    <script async defer src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
+    <script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
+</body>
+</html>
+
